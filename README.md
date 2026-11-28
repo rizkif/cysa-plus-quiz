@@ -25,3 +25,6 @@ Static, mobile-friendly practice app for GitHub Pages.
 - Keep the `assets/images/` folder in its original relative location.
 - Progress, bookmarks, answers, and seen-question cycles are stored locally in the browser and do not sync between devices.
 - No backend, database, or build step is required.
+
+## Progress soal yang pernah tampil
+Dashboard menampilkan jumlah soal yang sudah pernah keluar dan sisa soal untuk setiap sumber, termasuk rincian per domain. Perhitungan menggunakan ID soal unik: soal dihitung keluar saat pertama kali ditampilkan, meskipun belum dijawab. Data tersimpan di `localStorage` browser/perangkat yang digunakan.
