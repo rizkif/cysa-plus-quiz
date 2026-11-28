@@ -120,7 +120,7 @@ img { max-width:100%; }
 </section>
 <section class="section"><div class="sectionhead"><h3>Exam domains</h3><span class="small">4 domain pembelajaran</span></div><div class="domain-grid" id="domainCards"></div></section>
 <section class="section panel"><div class="sectionhead"><h3>Progress soal per sumber</h3><span class="small">Soal yang sudah pernah tampil · bukan hanya yang dijawab</span></div><div id="sourceProgress" class="source-progress"></div></section>
-<section class="section panel"><div class="sectionhead"><h3>Detail soal keluar per domain</h3><span class="small">Jumlah keluar dan sisa dari seluruh sumber</span></div><div id="domainProgress" class="domain-progress"></div></section>
+<section class="section panel"><div class="sectionhead"><h3>Detail soal keluar per domain</h3><span class="small" id="domainProgressScope">Mengikuti sumber yang dipilih</span></div><div id="domainProgress" class="domain-progress"></div></section>
 <section class="section panel"><div class="sectionhead"><h3>Mulai sesi latihan</h3><span class="small">Pilih fokus latihanmu</span></div>
 <div class="controls">
 <div class="field"><label>Domain</label><select id="domain"><option value="all">Semua domain</option><option>Security Operations</option><option>Vulnerability Management</option><option>Incident Response and Management</option><option>Reporting and Communication</option></select></div>
@@ -173,20 +173,26 @@ function renderHome(){
   const vals=Object.values(store.answers);$("attemptStat").textContent=vals.length;
   const correct=vals.filter(x=>x.correct).length;$("accuracyStat").textContent=vals.length?Math.round(correct/vals.length*100)+"%":"—";
   $("streakStat").textContent=store.bookmarks.length;
-  $("domainCards").innerHTML=DOMAINS.map((d,i)=>{const qs=BANK.filter(q=>q.domain===d);const done=qs.filter(q=>store.answers[q.id]).length;return `<div class="domain-card"><div class="count">DOMAIN 0${i+1} · ${qs.length} SOAL</div><h4>${d}</h4><div class="small">${done} / ${qs.length} sudah dikerjakan</div><div class="bar"><span style="width:${qs.length?done/qs.length*100:0}%"></span></div></div>`}).join("");
+  const selected=progressSourceIds();
+  $("domainCards").innerHTML=DOMAINS.map((d,i)=>{const qs=BANK.filter(q=>q.domain===d&&selected.includes(q.sourceId));const done=qs.filter(q=>store.answers[q.id]).length;return `<div class="domain-card"><div class="count">DOMAIN 0${i+1} · ${qs.length} SOAL</div><h4>${d}</h4><div class="small">${done} / ${qs.length} sudah dikerjakan</div><div class="bar"><span style="width:${qs.length?done/qs.length*100:0}%"></span></div></div>`}).join("");
   renderQuestionProgress();
 }
+function progressSourceIds(){
+ const checked=[...document.querySelectorAll(".source-check:checked")].map(el=>el.value);
+ return checked.length?checked:[];
+}
 function renderQuestionProgress(){
- const shown=new Set(store.shownQuestionIds||[]);
+ const shown=new Set(store.shownQuestionIds||[]),selected=progressSourceIds();
  $("sourceProgress").innerHTML=SOURCE_META.map(src=>{
    const qs=BANK.filter(q=>q.sourceId===src.id),out=qs.filter(q=>shown.has(q.id)).length,left=qs.length-out;
    const details=DOMAINS.map(d=>{const dq=qs.filter(q=>q.domain===d),n=dq.filter(q=>shown.has(q.id)).length;return dq.length?`<div class="domain-source-line"><span>${esc(d)}</span><span>${n} keluar · ${dq.length-n} sisa</span></div>`:""}).join("");
    return `<div class="source-progress-card"><h4>${esc(src.name)}</h4><div class="progress-numbers"><span><b>${out}</b> keluar</span><span><b>${left}</b> sisa</span><span><b>${qs.length}</b> total</span></div><div class="bar"><span style="width:${qs.length?out/qs.length*100:0}%"></span></div><div class="domain-source-lines">${details}</div></div>`;
  }).join("");
+ $("domainProgressScope").textContent=selected.length?`Hanya sumber terpilih (${selected.length})`:`Pilih minimal satu sumber untuk melihat progress domain`;
  $("domainProgress").innerHTML=DOMAINS.map((d,i)=>{
-   const qs=BANK.filter(q=>q.domain===d),out=qs.filter(q=>shown.has(q.id)).length,left=qs.length-out;
-   const bySource=SOURCE_META.map(src=>{const sq=qs.filter(q=>q.sourceId===src.id);if(!sq.length)return "";const n=sq.filter(q=>shown.has(q.id)).length;return `<div class="domain-source-line"><span>${esc(src.name)}</span><span>${n} keluar · ${sq.length-n} sisa</span></div>`}).join("");
-   return `<div class="domain-progress-row"><div class="domain-progress-head"><strong>DOMAIN 0${i+1} · ${esc(d)}</strong><span>${out} keluar · ${left} sisa · ${qs.length} total</span></div><div class="bar"><span style="width:${qs.length?out/qs.length*100:0}%"></span></div><div class="domain-source-lines">${bySource}</div></div>`;
+   const qs=BANK.filter(q=>q.domain===d&&selected.includes(q.sourceId)),out=qs.filter(q=>shown.has(q.id)).length,left=qs.length-out;
+   const bySource=SOURCE_META.filter(src=>selected.includes(src.id)).map(src=>{const sq=qs.filter(q=>q.sourceId===src.id);if(!sq.length)return "";const n=sq.filter(q=>shown.has(q.id)).length;return `<div class="domain-source-line"><span>${esc(src.name)}</span><span>${n} keluar · ${sq.length-n} sisa · ${sq.length} total</span></div>`}).join("");
+   return `<div class="domain-progress-row"><div class="domain-progress-head"><strong>DOMAIN 0${i+1} · ${esc(d)}</strong><span>${out} keluar · ${left} sisa · ${qs.length} total</span></div><div class="bar"><span style="width:${qs.length?out/qs.length*100:0}%"></span></div><div class="domain-source-lines">${bySource||'<span class="small">Tidak ada soal dari sumber terpilih pada domain ini.</span>'}</div></div>`;
  }).join("");
 }
 function showHome(){clearInterval(tick);["home","quiz","results","history"].forEach(x=>$(x).classList.add("hidden"));$("home").classList.remove("hidden");renderHome();}
@@ -272,5 +278,6 @@ function finish(){
  renderHome();
 }
 function showHistory(){["home","quiz","results"].forEach(x=>$(x).classList.add("hidden"));$("history").classList.remove("hidden");$("historyList").innerHTML=store.history.length?store.history.map(h=>`<div class="reviewrow"><b>${esc(h.date)}</b><div>${h.total} soal · <span class="${h.pct>=70?"good":"bad"}">${h.pct}%</span> · ${h.correct} benar · ${h.wrong} salah · ${Math.floor(h.seconds/60)}m ${h.seconds%60}s</div></div>`).join(""):"<p class='small'>Belum ada riwayat latihan.</p>";}
+document.querySelectorAll(".source-check").forEach(el=>el.addEventListener("change",()=>{renderHome();}));
 renderHome();
 </script><div id="imageViewer" onclick="closeImageViewer()"><button class="primary" onclick="event.stopPropagation();closeImageViewer()">Tutup ✕</button><img id="viewerImage" alt="Gambar pertanyaan diperbesar" onclick="event.stopPropagation()"></div></body></html>
